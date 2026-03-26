@@ -172,6 +172,37 @@ DataForML/
 
 ## Доступные скиллы
 
+Скиллы вызываются командой `/имя` прямо в чат Claude Code (не в терминал).
+
+| Скилл | Шаг | Описание | Входные данные |
+|-------|-----|----------|----------------|
+| `/data-pipeline` | 1–5 | Полный пайплайн с HITL — запрашивает `domain`, `ml_task`, `modality` и ведёт все шаги | — |
+| `/data-collection` | 1/5 | Только сбор: создаёт `DataCollectionAgent`, `config.yaml`, `requirements.txt`, `eda.ipynb` | `domain` |
+| `/data-quality` | 2/5 | Только чистка: находит и устраняет дубли, пропуски, выбросы, дисбаланс | путь к `data/raw/*.parquet` |
+| `/annotation` | 3/5 | Только разметка: zero-shot/Whisper/YOLO, флагование low-confidence, экспорт в LabelStudio | путь к `data/clean/*.parquet` |
+| `/active-learning` | 4/5 | Только AL-отбор: entropy vs random, learning curve, итоговый датасет | путь к `data/annotated/*.parquet` |
+
+### Примеры использования
+
+```
+# Полный пайплайн — Claude спросит параметры:
+/data-pipeline
+
+# Только шаг 1 — для нового домена:
+/data-collection
+
+# Продолжить с шага 2 (данные уже собраны):
+/data-quality
+
+# Продолжить с шага 3:
+/annotation
+
+# Продолжить с шага 4:
+/active-learning
+```
+
+### Файлы скиллов
+
 | Скилл | Файл |
 |-------|------|
 | `/data-pipeline` | `.claude/skills/data-pipeline.md` |
