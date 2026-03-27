@@ -297,7 +297,8 @@
 
 Визуальный playground с интерактивной схемой всех шагов пайплайна:
 
-**[Открыть Pipeline Playground](./pipeline_playground.html)**
+**[Открыть Pipeline Playground](./pipeline_playground.html)**  
+
+![Картинка](./pipeline.png)
 
 Playground позволяет интерактивно исследовать архитектуру пайплайна, переключаться между слоями (агенты, HITL-точки, потоки данных) и настраивать отображение.
-x
