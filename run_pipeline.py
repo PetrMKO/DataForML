@@ -1,9 +1,9 @@
 """
 Единый дата-пайплайн с Human-in-the-Loop.
-Domain: news classification
+Domain: news categorization
 
 Использование:
-    python run_pipeline.py --domain "news classification" --ml_task classification
+    python run_pipeline.py --domain "news categorization" --ml_task classification
 
 С Prefect UI:
     prefect server start
@@ -371,8 +371,8 @@ def generate_report(domain: str, ml_task: str, metrics: dict,
     print(f"\n📄 Итоговый отчёт → reports/pipeline_report.md")
 
 
-@flow(name="DataPipeline — news classification", log_prints=True)
-def data_pipeline(domain: str = "news classification", ml_task: str = "classification",
+@flow(name="DataPipeline — news categorization", log_prints=True)
+def data_pipeline(domain: str = "news categorization", ml_task: str = "classification",
                   modality: str = "text", config: str = "config.yaml",
                   confidence_threshold: float = 0.85):
 
@@ -470,7 +470,7 @@ def _write_data_card(df: pd.DataFrame, path: str) -> None:
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='DataPipeline — сбор и подготовка данных для ML')
-    parser.add_argument('--domain', default='news classification')
+    parser.add_argument('--domain', default='news categorization')
     parser.add_argument('--ml_task', default='classification',
                         choices=['classification', 'sentiment', 'ner', 'generation'])
     parser.add_argument('--modality', default='text', choices=['text', 'audio', 'image'])

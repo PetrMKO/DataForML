@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>DataForML — Pipeline Playground</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0f1117; color: #e2e8f0; font-family: system-ui, sans-serif; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+  h1 { font-size: 14px; font-weight: 600; color: #94a3b8; padding: 10px 16px; border-bottom: 1px solid #1e293b; letter-spacing: 0.05em; text-transform: uppercase; flex-shrink: 0; }
+  .main { display: flex; flex: 1; overflow: hidden; }
+
+  /* Sidebar */
+  .sidebar { width: 220px; flex-shrink: 0; border-right: 1px solid #1e293b; display: flex; flex-direction: column; overflow-y: auto; }
+  .sidebar-section { padding: 12px; border-bottom: 1px solid #1e293b; }
+  .sidebar-section h2 { font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 8px; }
+  .preset-btn { display: block; width: 100%; text-align: left; background: #1e293b; border: 1px solid #334155; color: #cbd5e1; padding: 5px 8px; font-size: 12px; border-radius: 4px; cursor: pointer; margin-bottom: 4px; transition: background 0.1s; }
+  .preset-btn:hover, .preset-btn.active { background: #334155; color: #f1f5f9; border-color: #475569; }
+  .layer-row { display: flex; align-items: center; gap: 6px; margin-bottom: 5px; cursor: pointer; user-select: none; }
+  .layer-dot { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+  .layer-row label { font-size: 12px; color: #cbd5e1; cursor: pointer; }
+  .layer-row input { display: none; }
+  .conn-row { display: flex; align-items: center; gap: 6px; margin-bottom: 5px; }
+  .conn-line { width: 24px; height: 2px; flex-shrink: 0; }
+  .conn-row label { font-size: 12px; color: #cbd5e1; cursor: pointer; }
+  .conn-row input { display: none; }
+  .zoom-controls { display: flex; gap: 4px; }
+  .zoom-btn { background: #1e293b; border: 1px solid #334155; color: #cbd5e1; width: 28px; height: 28px; border-radius: 4px; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; }
+  .zoom-btn:hover { background: #334155; }
+  .comment-item { background: #1e293b; border-radius: 4px; padding: 7px 8px; margin-bottom: 5px; font-size: 11px; }
+  .comment-node { color: #7dd3fc; font-weight: 600; }
+  .comment-text { color: #94a3b8; margin-top: 2px; line-height: 1.4; }
+  .comment-del { color: #ef4444; cursor: pointer; float: right; font-size: 13px; line-height: 1; margin-top: -1px; }
+  .no-comments { color: #475569; font-size: 11px; font-style: italic; }
+
+  /* Canvas area */
+  .canvas-area { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+  .svg-wrap { flex: 1; overflow: hidden; position: relative; }
+  svg { cursor: grab; }
+  svg:active { cursor: grabbing; }
+
+  /* Bottom prompt */
+  .prompt-area { border-top: 1px solid #1e293b; padding: 10px 14px; background: #0a0d14; flex-shrink: 0; max-height: 120px; display: flex; gap: 10px; align-items: flex-start; }
+  .prompt-text { flex: 1; font-family: 'SF Mono', 'Fira Code', monospace; font-size: 11px; color: #94a3b8; line-height: 1.5; white-space: pre-wrap; overflow-y: auto; max-height: 96px; }
+  .copy-btn { background: #1e40af; border: none; color: #bfdbfe; padding: 5px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 600; flex-shrink: 0; transition: background 0.1s; }
+  .copy-btn:hover { background: #1d4ed8; }
+  .copy-btn.copied { background: #166534; color: #bbf7d0; }
+
+  /* Modal */
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; z-index: 100; }
+  .modal-overlay.open { display: flex; }
+  .modal { background: #1e293b; border: 1px solid #334155; border-radius: 8px; width: 360px; padding: 16px; }
+  .modal h3 { font-size: 13px; font-weight: 600; color: #f1f5f9; margin-bottom: 4px; }
+  .modal .modal-sub { font-size: 11px; color: #64748b; margin-bottom: 10px; }
+  .modal textarea { width: 100%; background: #0f1117; border: 1px solid #334155; color: #e2e8f0; padding: 8px; border-radius: 4px; font-size: 12px; resize: vertical; min-height: 70px; outline: none; font-family: inherit; }
+  .modal textarea:focus { border-color: #3b82f6; }
+  .modal-btns { display: flex; gap: 6px; margin-top: 10px; justify-content: flex-end; }
+  .modal-btns button { padding: 5px 14px; border-radius: 4px; font-size: 12px; cursor: pointer; border: none; font-weight: 600; }
+  .btn-save { background: #2563eb; color: #eff6ff; }
+  .btn-save:hover { background: #1d4ed8; }
+  .btn-cancel { background: #334155; color: #94a3b8; }
+  .btn-cancel:hover { background: #475569; }
+
+  /* Metrics bar */
+  .metrics-bar { display: flex; gap: 16px; padding: 6px 14px; background: #0a0d14; border-bottom: 1px solid #1e293b; flex-shrink: 0; }
+  .metric { font-size: 11px; }
+  .metric-label { color: #475569; }
+  .metric-value { color: #7dd3fc; font-weight: 700; margin-left: 4px; font-family: monospace; }
+  .metric-value.green { color: #4ade80; }
+  .metric-value.yellow { color: #fbbf24; }
+</style>
+</head>
+<body>
+
+<h1>DataForML — ML Pipeline Visualizer &nbsp;·&nbsp; news categorization / classification</h1>
+
+<div class="metrics-bar">
+  <div class="metric"><span class="metric-label">Raw</span><span class="metric-value">4 000</span></div>
+  <div class="metric"><span class="metric-label">Clean</span><span class="metric-value">4 000</span></div>
+  <div class="metric"><span class="metric-label">Low-conf flagged</span><span class="metric-value yellow">1 984 (49.6%)</span></div>
+  <div class="metric"><span class="metric-label">AL pool</span><span class="metric-value">1 700</span></div>
+  <div class="metric"><span class="metric-label">Accuracy</span><span class="metric-value green">0.88</span></div>
+  <div class="metric"><span class="metric-label">F1 macro</span><span class="metric-value green">0.877</span></div>
+  <div class="metric"><span class="metric-label">Entropy vs Random ΔF1</span><span class="metric-value green">+1.3%</span></div>
+</div>
+
+<div class="main">
+  <div class="sidebar">
+    <div class="sidebar-section">
+      <h2>Presets</h2>
+      <button class="preset-btn active" onclick="applyPreset('full')">Full Pipeline</button>
+      <button class="preset-btn" onclick="applyPreset('data')">Data Flow Only</button>
+      <button class="preset-btn" onclick="applyPreset('hitl')">HITL Focus</button>
+      <button class="preset-btn" onclick="applyPreset('model')">Model Training</button>
+    </div>
+
+    <div class="sidebar-section">
+      <h2>Layers</h2>
+      <label class="layer-row" onclick="toggleLayer('orchestration')">
+        <input type="checkbox" checked>
+        <div class="layer-dot" style="background:#a78bfa"></div>
+        <label>Orchestration</label>
+      </label>
+      <label class="layer-row" onclick="toggleLayer('agents')">
+        <input type="checkbox" checked>
+        <div class="layer-dot" style="background:#34d399"></div>
+        <label>Agents</label>
+      </label>
+      <label class="layer-row" onclick="toggleLayer('hitl')">
+        <input type="checkbox" checked>
+        <div class="layer-dot" style="background:#f87171"></div>
+        <label>HITL Points</label>
+      </label>
+      <label class="layer-row" onclick="toggleLayer('data')">
+        <input type="checkbox" checked>
+        <div class="layer-dot" style="background:#fb923c"></div>
+        <label>Data Stores</label>
+      </label>
+      <label class="layer-row" onclick="toggleLayer('output')">
+        <input type="checkbox" checked>
+        <div class="layer-dot" style="background:#38bdf8"></div>
+        <label>Output / Reports</label>
+      </label>
+    </div>
+
+    <div class="sidebar-section">
+      <h2>Connections</h2>
+      <div class="conn-row" onclick="toggleConn('data-flow')">
+        <input type="checkbox" checked>
+        <div class="conn-line" style="background:#3b82f6"></div>
+        <label style="font-size:12px;color:#cbd5e1;cursor:pointer">Data Flow</label>
+      </div>
+      <div class="conn-row" onclick="toggleConn('hitl-gate')">
+        <input type="checkbox" checked>
+        <div class="conn-line" style="background:#ef4444;border-top:2px dashed #ef4444;height:0"></div>
+        <label style="font-size:12px;color:#cbd5e1;cursor:pointer">HITL Gate</label>
+      </div>
+      <div class="conn-row" onclick="toggleConn('output')">
+        <input type="checkbox" checked>
+        <div class="conn-line" style="background:#10b981"></div>
+        <label style="font-size:12px;color:#cbd5e1;cursor:pointer">Output</label>
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <h2>Zoom</h2>
+      <div class="zoom-controls">
+        <button class="zoom-btn" onclick="zoom(1.2)">+</button>
+        <button class="zoom-btn" onclick="zoom(0.8)">−</button>
+        <button class="zoom-btn" onclick="resetZoom()" title="Reset">↺</button>
+      </div>
+    </div>
+
+    <div class="sidebar-section" style="flex:1">
+      <h2>Comments (<span id="comment-count">0</span>)</h2>
+      <div id="comment-list"><div class="no-comments">Click any node to add a comment</div></div>
+    </div>
+  </div>
+
+  <div class="canvas-area">
+    <div class="svg-wrap" id="svg-wrap">
+      <svg id="diagram" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <marker id="arr-blue" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+            <polygon points="0 0, 8 3, 0 6" fill="#3b82f6"/>
+          </marker>
+          <marker id="arr-red" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+            <polygon points="0 0, 8 3, 0 6" fill="#ef4444"/>
+          </marker>
+          <marker id="arr-green" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+            <polygon points="0 0, 8 3, 0 6" fill="#10b981"/>
+          </marker>
+          <marker id="arr-gray" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+            <polygon points="0 0, 8 3, 0 6" fill="#6b7280"/>
+          </marker>
+          <filter id="glow">
+            <feGaussianBlur stdDeviation="2" result="blur"/>
+            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+        </defs>
+        <g id="diagram-group" transform="translate(30, 30) scale(1)">
+          <!-- Rendered by JS -->
+        </g>
+      </svg>
+    </div>
+
+    <div class="prompt-area">
+      <div class="prompt-text" id="prompt-text">Выберите слои и кликните на компоненты, чтобы добавить комментарии.</div>
+      <button class="copy-btn" id="copy-btn" onclick="copyPrompt()">Copy</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <h3 id="modal-node-name">Component</h3>
+    <div class="modal-sub" id="modal-node-sub"></div>
+    <textarea id="modal-textarea" placeholder="Добавьте комментарий или вопрос об этом компоненте..."></textarea>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn-save" onclick="saveComment()">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── State ───────────────────────────────────────────────────────────────────
+const state = {
+  layers: { orchestration: true, agents: true, hitl: true, data: true, output: true },
+  conns: { 'data-flow': true, 'hitl-gate': true, 'output': true },
+  comments: [],
+  scale: 1,
+  tx: 0,
+  ty: 0,
+  activePreset: 'full',
+  pendingNode: null
+};
+
+// ─── Node definitions ─────────────────────────────────────────────────────────
+const NODES = [
+  // Orchestration
+  { id: 'entry',    label: 'run_pipeline.py',    sub: '@flow  Prefect entry point',         x: 340, y: 20,  w: 160, h: 44, layer: 'orchestration', color: '#2e1065', border: '#a78bfa' },
+
+  // Agents row
+  { id: 'collect',  label: 'DataCollectionAgent', sub: 'Step 1 · HuggingFace ag_news\n4000 rows → data/raw/', x: 40,  y: 130, w: 155, h: 54, layer: 'agents', color: '#052e16', border: '#34d399' },
+  { id: 'clean',    label: 'DataQualityAgent',    sub: 'Step 2 · 0 issues, severity=low\ndata/clean/',        x: 220, y: 130, w: 155, h: 54, layer: 'agents', color: '#052e16', border: '#34d399' },
+  { id: 'annotate', label: 'AnnotationAgent',     sub: 'Step 3 · rule-based fallback\n1984 low-conf flagged', x: 400, y: 130, w: 155, h: 54, layer: 'agents', color: '#052e16', border: '#34d399' },
+  { id: 'al',       label: 'ALAgent',             sub: 'Step 4 · entropy strategy\nF1=0.865 vs random 0.852', x: 580, y: 130, w: 155, h: 54, layer: 'agents', color: '#052e16', border: '#34d399' },
+  { id: 'trainer',  label: 'ModelTrainer',        sub: 'Step 5 · TF-IDF + LogReg\nAccuracy=0.88 F1=0.877',   x: 760, y: 130, w: 155, h: 54, layer: 'agents', color: '#052e16', border: '#34d399' },
+
+  // HITL
+  { id: 'hitl1',   label: '❗ HITL-1',           sub: 'Review 1984 low-conf examples\nexports/review_queue.csv', x: 310, y: 255, w: 155, h: 50, layer: 'hitl', color: '#450a0a', border: '#f87171' },
+  { id: 'hitl2',   label: '❗ HITL-2',           sub: 'Confirm dataset before train\n4000 rows, 4 classes',      x: 580, y: 255, w: 155, h: 50, layer: 'hitl', color: '#450a0a', border: '#f87171' },
+
+  // Data stores
+  { id: 'raw',      label: 'data/raw/',          sub: 'collected_news_*.parquet\n4000 rows', x: 40,  y: 340, w: 130, h: 44, layer: 'data', color: '#431407', border: '#fb923c' },
+  { id: 'dclean',   label: 'data/clean/',        sub: 'cleaned_news_*.parquet\n4000 rows',  x: 190, y: 340, w: 130, h: 44, layer: 'data', color: '#431407', border: '#fb923c' },
+  { id: 'danno',    label: 'data/annotated/',    sub: 'annotated_*.parquet',                x: 340, y: 340, w: 130, h: 44, layer: 'data', color: '#431407', border: '#fb923c' },
+  { id: 'dfinal',   label: 'data/final/',        sub: 'al_selected_*.parquet\n1700 pool',   x: 490, y: 340, w: 130, h: 44, layer: 'data', color: '#431407', border: '#fb923c' },
+  { id: 'dlabeled', label: 'data/labeled/',      sub: 'final dataset + data card',          x: 640, y: 340, w: 130, h: 44, layer: 'data', color: '#431407', border: '#fb923c' },
+  { id: 'models',   label: 'models/',            sub: 'model_*.pkl\nvectorizer + classes',  x: 790, y: 340, w: 130, h: 44, layer: 'data', color: '#431407', border: '#fb923c' },
+
+  // Outputs
+  { id: 'qrep',    label: 'quality_report.json', sub: 'reports/',         x: 120, y: 430, w: 140, h: 38, layer: 'output', color: '#0c1a3a', border: '#38bdf8' },
+  { id: 'spec',    label: 'annotation_spec.md',  sub: 'reports/ + exports/', x: 290, y: 430, w: 140, h: 38, layer: 'output', color: '#0c1a3a', border: '#38bdf8' },
+  { id: 'alrep',   label: 'al_report.json',      sub: 'reports/',         x: 460, y: 430, w: 130, h: 38, layer: 'output', color: '#0c1a3a', border: '#38bdf8' },
+  { id: 'metrics', label: 'final_metrics.json',  sub: 'reports/',         x: 620, y: 430, w: 140, h: 38, layer: 'output', color: '#0c1a3a', border: '#38bdf8' },
+  { id: 'report',  label: 'pipeline_report.md',  sub: 'reports/ — 5 sections', x: 790, y: 430, w: 140, h: 38, layer: 'output', color: '#0c1a3a', border: '#38bdf8' },
+];
+
+const cx = n => n.x + n.w / 2;
+const cy = n => n.y + n.h / 2;
+
+const EDGES = [
+  // Entry → agents
+  { from: 'entry',   to: 'collect',  type: 'data-flow', label: 'domain, modality' },
+  { from: 'entry',   to: 'clean',    type: 'data-flow' },
+  { from: 'entry',   to: 'annotate', type: 'data-flow' },
+  { from: 'entry',   to: 'al',       type: 'data-flow' },
+  { from: 'entry',   to: 'trainer',  type: 'data-flow' },
+
+  // Agent chain
+  { from: 'collect',  to: 'clean',    type: 'data-flow', label: 'raw_path' },
+  { from: 'clean',    to: 'annotate', type: 'data-flow', label: 'clean_path' },
+  { from: 'annotate', to: 'hitl1',   type: 'hitl-gate', label: 'low-conf 49.6%' },
+  { from: 'hitl1',    to: 'al',      type: 'data-flow', label: 'reviewed_path' },
+  { from: 'al',       to: 'hitl2',   type: 'hitl-gate', label: 'final_path' },
+  { from: 'hitl2',    to: 'trainer', type: 'data-flow', label: 'labeled_path' },
+
+  // To data stores
+  { from: 'collect',  to: 'raw',      type: 'output' },
+  { from: 'clean',    to: 'dclean',   type: 'output' },
+  { from: 'annotate', to: 'danno',    type: 'output' },
+  { from: 'al',       to: 'dfinal',   type: 'output' },
+  { from: 'hitl2',    to: 'dlabeled', type: 'output' },
+  { from: 'trainer',  to: 'models',   type: 'output' },
+
+  // To reports
+  { from: 'clean',    to: 'qrep',    type: 'output' },
+  { from: 'annotate', to: 'spec',    type: 'output' },
+  { from: 'al',       to: 'alrep',   type: 'output' },
+  { from: 'trainer',  to: 'metrics', type: 'output' },
+  { from: 'trainer',  to: 'report',  type: 'output' },
+];
+
+const CONN_STYLE = {
+  'data-flow': { color: '#3b82f6', dash: '', arrow: 'arr-blue' },
+  'hitl-gate': { color: '#ef4444', dash: '6,4', arrow: 'arr-red' },
+  'output':    { color: '#10b981', dash: '3,3', arrow: 'arr-green' },
+};
+
+// ─── Rendering ────────────────────────────────────────────────────────────────
+function getNode(id) { return NODES.find(n => n.id === id); }
+
+function renderDiagram() {
+  const g = document.getElementById('diagram-group');
+  g.innerHTML = '';
+
+  const visibleIds = new Set(NODES.filter(n => state.layers[n.layer]).map(n => n.id));
+
+  // Draw edges first
+  EDGES.forEach(e => {
+    if (!state.conns[e.type]) return;
+    const fn = getNode(e.from), tn = getNode(e.to);
+    if (!fn || !tn) return;
+    if (!visibleIds.has(fn.id) || !visibleIds.has(tn.id)) return;
+
+    const s = CONN_STYLE[e.type];
+    const x1 = cx(fn), y1 = fn.y + fn.h;
+    const x2 = cx(tn), y2 = tn.y;
+
+    // Horizontal connection for same-row nodes
+    const sameRow = Math.abs(fn.y - tn.y) < 20;
+    let d;
+    if (sameRow) {
+      const ex1 = fn.x + fn.w, ey1 = cy(fn);
+      const ex2 = tn.x, ey2 = cy(tn);
+      const mx = (ex1 + ex2) / 2;
+      d = `M ${ex1} ${ey1} C ${mx} ${ey1}, ${mx} ${ey2}, ${ex2} ${ey2}`;
+    } else {
+      const mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
+      d = `M ${x1} ${y1} C ${x1} ${my}, ${x2} ${my}, ${x2} ${y2}`;
+    }
+
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('d', d);
+    path.setAttribute('fill', 'none');
+    path.setAttribute('stroke', s.color);
+    path.setAttribute('stroke-width', '1.5');
+    path.setAttribute('stroke-dasharray', s.dash);
+    path.setAttribute('marker-end', `url(#${s.arrow})`);
+    path.setAttribute('opacity', '0.7');
+    g.appendChild(path);
+
+    // Edge label
+    if (e.label) {
+      const lx = sameRow ? (fn.x + fn.w + tn.x) / 2 : (x1 + x2) / 2;
+      const ly = sameRow ? cy(fn) - 8 : (y1 + y2) / 2;
+      const txt = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      txt.setAttribute('x', lx);
+      txt.setAttribute('y', ly);
+      txt.setAttribute('text-anchor', 'middle');
+      txt.setAttribute('fill', s.color);
+      txt.setAttribute('font-size', '9');
+      txt.setAttribute('opacity', '0.85');
+      txt.textContent = e.label;
+      g.appendChild(txt);
+    }
+  });
+
+  // Draw nodes
+  NODES.filter(n => visibleIds.has(n.id)).forEach(n => {
+    const hasComment = state.comments.some(c => c.target === n.id);
+    const grp = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    grp.setAttribute('cursor', 'pointer');
+    grp.addEventListener('click', () => openModal(n));
+
+    // Shadow / glow for HITL
+    const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    rect.setAttribute('x', n.x); rect.setAttribute('y', n.y);
+    rect.setAttribute('width', n.w); rect.setAttribute('height', n.h);
+    rect.setAttribute('rx', 6);
+    rect.setAttribute('fill', hasComment ? '#1e3a5f' : n.color);
+    rect.setAttribute('stroke', hasComment ? '#60a5fa' : n.border);
+    rect.setAttribute('stroke-width', hasComment ? '2.5' : '1.5');
+    if (n.layer === 'hitl') rect.setAttribute('filter', 'url(#glow)');
+    grp.appendChild(rect);
+
+    // Label
+    const lines = [n.label, ...n.sub.split('\n')];
+    lines.forEach((line, i) => {
+      const t = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      t.setAttribute('x', n.x + n.w / 2);
+      t.setAttribute('y', n.y + 16 + i * 13);
+      t.setAttribute('text-anchor', 'middle');
+      t.setAttribute('font-size', i === 0 ? '11' : '9');
+      t.setAttribute('font-weight', i === 0 ? '700' : '400');
+      t.setAttribute('fill', i === 0 ? '#f1f5f9' : '#94a3b8');
+      t.textContent = line;
+      grp.appendChild(t);
+    });
+
+    // Comment indicator
+    if (hasComment) {
+      const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      dot.setAttribute('cx', n.x + n.w - 6); dot.setAttribute('cy', n.y + 6);
+      dot.setAttribute('r', 4); dot.setAttribute('fill', '#60a5fa');
+      grp.appendChild(dot);
+    }
+
+    g.appendChild(grp);
+  });
+
+  // Layer legend
+  drawLegend(g);
+  updatePrompt();
+}
+
+function drawLegend(g) {
+  const items = [
+    { color: '#a78bfa', label: 'Orchestration' },
+    { color: '#34d399', label: 'Agent' },
+    { color: '#f87171', label: 'HITL Point' },
+    { color: '#fb923c', label: 'Data Store' },
+    { color: '#38bdf8', label: 'Output/Report' },
+  ];
+  const bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+  bg.setAttribute('x', 10); bg.setAttribute('y', 490);
+  bg.setAttribute('width', 520); bg.setAttribute('height', 22);
+  bg.setAttribute('rx', 4); bg.setAttribute('fill', '#0f1117'); bg.setAttribute('opacity', '0.7');
+  g.appendChild(bg);
+  items.forEach((item, i) => {
+    const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    dot.setAttribute('cx', 20 + i * 104); dot.setAttribute('cy', 501);
+    dot.setAttribute('r', 5); dot.setAttribute('fill', item.color);
+    g.appendChild(dot);
+    const t = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    t.setAttribute('x', 30 + i * 104); t.setAttribute('y', 505);
+    t.setAttribute('font-size', '9'); t.setAttribute('fill', '#94a3b8');
+    t.textContent = item.label;
+    g.appendChild(t);
+  });
+}
+
+// ─── Transform / Zoom ─────────────────────────────────────────────────────────
+function applyTransform() {
+  const g = document.getElementById('diagram-group');
+  g.setAttribute('transform', `translate(${30 + state.tx}, ${30 + state.ty}) scale(${state.scale})`);
+}
+
+function zoom(factor) {
+  state.scale = Math.min(3, Math.max(0.3, state.scale * factor));
+  applyTransform();
+}
+function resetZoom() { state.scale = 1; state.tx = 0; state.ty = 0; applyTransform(); }
+
+// Pan
+let dragging = false, dragStart = { x: 0, y: 0 };
+const svg = document.getElementById('diagram');
+svg.addEventListener('mousedown', e => { if (e.target === svg || e.target.tagName === 'svg') { dragging = true; dragStart = { x: e.clientX - state.tx, y: e.clientY - state.ty }; } });
+window.addEventListener('mousemove', e => { if (!dragging) return; state.tx = e.clientX - dragStart.x; state.ty = e.clientY - dragStart.y; applyTransform(); });
+window.addEventListener('mouseup', () => dragging = false);
+svg.addEventListener('wheel', e => { e.preventDefault(); zoom(e.deltaY < 0 ? 1.1 : 0.9); }, { passive: false });
+
+// ─── Controls ─────────────────────────────────────────────────────────────────
+function toggleLayer(layer) {
+  state.layers[layer] = !state.layers[layer];
+  // sync checkbox visuals
+  document.querySelectorAll('.layer-row input').forEach((cb, i) => {
+    const layers = Object.keys(state.layers);
+    if (layers[i]) cb.checked = state.layers[layers[i]];
+  });
+  renderDiagram();
+}
+
+function toggleConn(type) {
+  state.conns[type] = !state.conns[type];
+  renderDiagram();
+}
+
+const PRESETS = {
+  full:  { layers: { orchestration:true, agents:true, hitl:true, data:true, output:true }, conns: { 'data-flow':true, 'hitl-gate':true, output:true } },
+  data:  { layers: { orchestration:false, agents:true, hitl:false, data:true, output:false }, conns: { 'data-flow':true, 'hitl-gate':false, output:true } },
+  hitl:  { layers: { orchestration:true, agents:true, hitl:true, data:false, output:false }, conns: { 'data-flow':true, 'hitl-gate':true, output:false } },
+  model: { layers: { orchestration:false, agents:false, hitl:true, data:true, output:true }, conns: { 'data-flow':true, 'hitl-gate':true, output:true } },
+};
+
+function applyPreset(name) {
+  const p = PRESETS[name];
+  if (!p) return;
+  state.layers = { ...p.layers };
+  state.conns = { ...p.conns };
+  state.activePreset = name;
+  document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.preset-btn').forEach(b => { if (b.textContent.toLowerCase().includes(name)) b.classList.add('active'); });
+  renderDiagram();
+}
+
+// ─── Modal / Comments ─────────────────────────────────────────────────────────
+function openModal(node) {
+  state.pendingNode = node;
+  document.getElementById('modal-node-name').textContent = node.label;
+  document.getElementById('modal-node-sub').textContent = node.sub.replace(/\n/g, ' · ');
+  const existing = state.comments.find(c => c.target === node.id);
+  document.getElementById('modal-textarea').value = existing ? existing.text : '';
+  document.getElementById('modal').classList.add('open');
+  document.getElementById('modal-textarea').focus();
+}
+
+function closeModal() {
+  document.getElementById('modal').classList.remove('open');
+  state.pendingNode = null;
+}
+
+function saveComment() {
+  const text = document.getElementById('modal-textarea').value.trim();
+  if (!text) { closeModal(); return; }
+  const node = state.pendingNode;
+  const idx = state.comments.findIndex(c => c.target === node.id);
+  if (idx >= 0) state.comments[idx].text = text;
+  else state.comments.push({ id: Date.now(), target: node.id, label: node.label, sub: node.sub, text });
+  closeModal();
+  renderCommentList();
+  renderDiagram();
+}
+
+function deleteComment(id) {
+  state.comments = state.comments.filter(c => c.id !== id);
+  renderCommentList();
+  renderDiagram();
+}
+
+function renderCommentList() {
+  const el = document.getElementById('comment-list');
+  document.getElementById('comment-count').textContent = state.comments.length;
+  if (!state.comments.length) { el.innerHTML = '<div class="no-comments">Click any node to add a comment</div>'; return; }
+  el.innerHTML = state.comments.map(c => `
+    <div class="comment-item">
+      <span class="comment-del" onclick="deleteComment(${c.id})">✕</span>
+      <div class="comment-node">${c.label}</div>
+      <div class="comment-text">${c.text}</div>
+    </div>`).join('');
+}
+
+// ─── Prompt ───────────────────────────────────────────────────────────────────
+function updatePrompt() {
+  const visibleLayers = Object.entries(state.layers).filter(([,v]) => v).map(([k]) => k);
+  const allLayers = Object.keys(state.layers);
+  const isAll = visibleLayers.length === allLayers.length;
+
+  let text = `This is the DataForML ML pipeline (news categorization / classification).`;
+  if (!isAll) text += `\nShowing layers: ${visibleLayers.join(', ')}.`;
+  text += `\n\nPipeline: DataCollectionAgent (4000 rows) → DataQualityAgent (0 issues) → AnnotationAgent (1984 low-conf flagged, 49.6%) → HITL-1 review → ALAgent (entropy F1=0.865 vs random 0.852) → HITL-2 confirm → ModelTrainer (Accuracy=0.88, F1-macro=0.877).`;
+
+  if (state.comments.length) {
+    text += '\n\nFeedback on specific components:\n';
+    state.comments.forEach(c => {
+      text += `\n**${c.label}** (${c.sub.split('\n')[0]}):\n${c.text}\n`;
+    });
+  }
+
+  document.getElementById('prompt-text').textContent = text;
+}
+
+function copyPrompt() {
+  const text = document.getElementById('prompt-text').textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById('copy-btn');
+    btn.textContent = 'Copied!'; btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 1500);
+  });
+}
+
+// Close modal on overlay click
+document.getElementById('modal').addEventListener('click', e => { if (e.target === document.getElementById('modal')) closeModal(); });
+// Keyboard shortcut
+window.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+renderDiagram();
+</script>
+</body>
+</html>

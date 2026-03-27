@@ -1,4 +1,4 @@
-domain: news classification
+domain: news categorization
 ml_task: classification
 modality: text
 
