@@ -1,0 +1,42 @@
+domain: news classification
+ml_task: classification
+modality: text
+
+sources:
+  - type: hf_dataset
+    name: ag_news
+    split: train
+    max_samples: 3000
+    text_col: text
+    label_col: label
+
+  - type: hf_dataset
+    name: fancyzhx/ag_news
+    split: test
+    max_samples: 1000
+    text_col: text
+    label_col: label
+
+output:
+  path: data/raw/
+  format: parquet
+  filename: "collected_{domain}_{date}.parquet"
+
+annotation:
+  confidence_threshold: 0.85
+  classes:
+    - World
+    - Sports
+    - Business
+    - Sci/Tech
+
+active_learning:
+  model: logreg
+  n_start: 100
+  n_iter: 5
+  n_per_iter: 50
+  strategy: entropy
+
+api_keys:
+  kaggle_username: ""
+  kaggle_key: ""

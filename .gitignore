@@ -1,0 +1,29 @@
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+.env
+.DS_Store
+
+# Data files (large, generated)
+data/raw/
+data/clean/
+data/annotated/
+data/final/
+data/labeled/
+data/review/
+
+# Models
+models/
+
+# Exports
+exports/
+
+# Notebooks checkpoints
+.ipynb_checkpoints/
+
+# Reports (generated)
+reports/learning_curve.png
+reports/final_metrics.json
+reports/quality_report.json
+reports/al_report.json
