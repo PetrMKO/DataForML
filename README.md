@@ -19,10 +19,9 @@ source .venv/bin/activate      # Windows: .venv\Scripts\activate
 
 # 3. Установить зависимости
 pip install -r requirements.txt
-python -m spacy download en_core_web_sm
 
 # 4. Запустить пайплайн
-python run_pipeline.py --domain "sentiment analysis" --ml_task classification
+python run_pipeline.py --domain "news classification" --ml_task classification
 ```
 
 После старта пайплайн идёт сам. Потребуется ваше участие дважды — в точках Human-in-the-Loop (описаны ниже).
@@ -84,8 +83,7 @@ python run_pipeline.py --domain "sentiment analysis" --ml_task classification
 
 ### Шаг 5 — Обучение модели
 
-TF-IDF + Logistic Regression (или DistilBERT если указать `--model bert`).
-Сохраняет модель в `models/` и метрики в `reports/final_metrics.json`.
+TF-IDF + Logistic Regression. Сохраняет модель в `models/` и метрики в `reports/final_metrics.json`.
 
 ---
 
@@ -93,25 +91,50 @@ TF-IDF + Logistic Regression (или DistilBERT если указать `--model
 
 ```bash
 python run_pipeline.py \
-  --domain "название задачи"          # обязательно
+  --domain "news classification"      # по умолчанию "news classification"
   --ml_task classification            # classification | sentiment | ner | generation
   --modality text                     # text | audio | image (по умолчанию text)
-  --config config.yaml                # путь к конфигу источников
-  --confidence-threshold 0.85         # порог для HITL-1 (0.0–1.0)
+  --config config.yaml                # путь к конфигу источников (по умолчанию config.yaml)
+  --confidence-threshold 0.85         # порог для HITL-1 (по умолчанию 0.85)
 ```
 
 Примеры:
 
 ```bash
-# Классификация тональности отзывов
-python run_pipeline.py --domain "product reviews sentiment" --ml_task sentiment
+# Текущий домен (по умолчанию, источники уже настроены в config.yaml)
+python run_pipeline.py
 
-# NER для медицинских текстов
+# Явно указать домен и задачу
+python run_pipeline.py --domain "news classification" --ml_task classification
+
+# NER для медицинских текстов (требует: pip install spacy && python -m spacy download en_core_web_sm)
 python run_pipeline.py --domain "medical NER" --ml_task ner --confidence-threshold 0.9
 
-# Начать с шага 3 (данные уже собраны и очищены)
-# Указать путь в интерактивном режиме через /data-pipeline → from 3
+# Продолжить с шага 3 через интерактивный режим (/data-pipeline → from 3 <path>)
 ```
+
+---
+
+## Streamlit дашборд
+
+```bash
+pip install streamlit   # уже включён в requirements.txt
+streamlit run dashboard.py
+```
+
+Открывается на http://localhost:8501. Две вкладки:
+
+**❗ HITL Review** — основной инструмент для проверки авторазметки (HITL-1):
+- Таблица флагнутых примеров с фильтром по confidence
+- Selectbox для изменения метки каждого примера
+- Кнопка сохранения → `exports/review_queue_corrected.csv`
+- Пайплайн подхватывает файл автоматически и продолжается
+
+**📈 Metrics** — мониторинг качества после завершения пайплайна:
+- Accuracy, F1 macro, F1 weighted итоговой модели
+- Learning curve (entropy vs random, `reports/learning_curve.png`)
+- История AL-цикла по итерациям
+- Распределение классов в размеченном датасете
 
 ---
 
@@ -154,7 +177,7 @@ Claude спросит `domain`, `ml_task`, `modality` — и пойдёт сам
 | `pause` | Остановить после текущего шага |
 | `status` | Показать прогресс и пути к файлам |
 | `skip N` | Пропустить шаг N |
-| `from N` | Начать с шага N |
+| `from N path` | Начать с шага N, взяв данные из path (только в `/data-pipeline` скилле) |
 | `retry` | Повторить последний шаг |
 
 ---
@@ -192,43 +215,60 @@ exports/
 ## Конфигурация источников (`config.yaml`)
 
 ```yaml
+domain: news classification
+ml_task: classification
+modality: text
+
 sources:
   - type: hf_dataset
-    name: imdb
+    name: ag_news               # AG News — 4 класса: World, Sports, Business, Sci/Tech
     split: train
-    max_samples: 5000
+    max_samples: 3000
 
-  - type: scrape
-    url: "https://example.com/reviews"
-    selector: ".review-text"
-    max_pages: 3
+  - type: hf_dataset
+    name: fancyzhx/ag_news
+    split: test
+    max_samples: 1000
 
 output:
   path: data/raw/
   format: parquet
+
+annotation:
+  confidence_threshold: 0.85
+  classes: [World, Sports, Business, Sci/Tech]
 
 api_keys:
   kaggle_username: ""
   kaggle_key: ""
 ```
 
-Источники подбираются автоматически под `--domain` если не заданы явно.
-
----
+Чтобы сменить домен — замените `name` источников и `classes` в `annotation`. Источники поддерживают типы: `hf_dataset`, `scrape`, `api`, `kaggle`.
 
 ---
 
 ## Зависимости
 
 ```bash
+# Обязательные (core)
 pip install -r requirements.txt
-python -m spacy download en_core_web_sm   # для английского NER
-python -m spacy download ru_core_news_sm  # для русского NER (опционально)
+
+# Рекомендуется — zero-shot авторазметка через BART (шаг 3)
+# Без этого AnnotationAgent использует rule-based fallback (~50% флагнутых vs ~15%)
+pip install torch transformers
+
+# Только для NER-задач (--ml_task ner)
+# Для classification/sentiment НЕ нужно — spaCy не используется
+pip install spacy && python -m spacy download en_core_web_sm
+
+# Только для audio/image
+pip install openai-whisper        # modality=audio
+pip install ultralytics           # modality=image
 ```
 
-Основные библиотеки: `pandas`, `scikit-learn`, `transformers`, `spacy`, `prefect`, `datasets`.
+Основные библиотеки: `pandas`, `scikit-learn`, `prefect`, `datasets`, `matplotlib`.
 
-Опциональные (только если нужны audio/image): `openai-whisper`, `ultralytics`.
+> **Важно:** `torch` и `transformers` не входят в основной `requirements.txt` из-за большого размера (~2 GB). Без них пайплайн запустится, но качество авторазметки будет ниже.
 
 ---
 
@@ -236,7 +276,7 @@ python -m spacy download ru_core_news_sm  # для русского NER (опц�
 
 ```bash
 pip install -r requirements.txt
-python run_pipeline.py --domain "your domain" --ml_task classification
+python run_pipeline.py --domain "news classification" --ml_task classification
 ```
 
-Промежуточные результаты сохраняются в parquet на каждом шаге — пайплайн можно возобновить с любого места через `from N`.
+Промежуточные результаты сохраняются в parquet на каждом шаге. Для возобновления с нужного шага используйте команду `from N path` в интерактивном режиме (`/data-pipeline`).

@@ -421,7 +421,8 @@ if __name__ == '__main__':
 1. Провести стартовый диалог (см. выше)
 2. Создать `run_pipeline.py` с кодом выше (подставить реальные параметры)
 3. Обновить `config.yaml` подходящими источниками для domain
-4. Выполнить шаги 1–5 последовательно, сопровождая каждый прогресс-баннером:
+4. Создать `dashboard.py` (если не существует или domain изменился)
+5. Выполнить шаги 1–5 последовательно, сопровождая каждый прогресс-баннером:
 
 ```
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -482,12 +483,33 @@ if __name__ == '__main__':
 - В Шаге 2: `agent.llm_explain()` объясняет найденные проблемы качества
 - Использовать `anthropic` SDK, модель `claude-sonnet-4-6`
 
-## Бонус: Streamlit дашборд (+2 балла)
+## Streamlit дашборд (создавать всегда)
 
-Создать `dashboard.py`:
-- Вкладка "HITL Review": загрузить `review_queue.csv`, отобразить примеры, дать возможность менять метки, сохранить `review_queue_corrected.csv`
-- Вкладка "Metrics": показать `final_metrics.json` и `learning_curve.png`
-- Запуск: `streamlit run dashboard.py`
+`dashboard.py` создаётся **обязательно** при каждом вызове `/data-pipeline`.
+
+Две вкладки:
+- **❗ HITL Review** — загружает `exports/review_queue.csv`, позволяет менять метки через selectbox, сохраняет `exports/review_queue_corrected.csv`. Это основной инструмент для HITL-1.
+- **📈 Metrics** — показывает `reports/final_metrics.json` (accuracy/F1), `reports/learning_curve.png`, историю AL-цикла, распределение классов.
+
+Запуск:
+```bash
+pip install streamlit
+streamlit run dashboard.py
+```
+
+В инструкции HITL-1 всегда указывать оба варианта проверки:
+```
+❗ HITL-1: Требуется ручная проверка
+
+   Вариант 1 (рекомендуется): Streamlit дашборд
+   → streamlit run dashboard.py
+   → Вкладка "HITL Review" — редактируйте метки и нажмите "Сохранить"
+
+   Вариант 2: вручную в Excel/CSV
+   → Откройте exports/review_queue.csv
+   → Исправьте колонку predicted_label
+   → Сохраните как exports/review_queue_corrected.csv
+```
 
 ## Управление пайплайном
 

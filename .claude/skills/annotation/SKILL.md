@@ -310,13 +310,20 @@ python -m spacy download ru_core_news_sm
 2. **Сделать паузу** и сообщить пользователю:
    ```
    ⚠️  Требуется ручная проверка: {N} примеров (confidence < {threshold})
-   Файл для проверки: exports/labelstudio_review.json
 
-   Инструкция:
-   1. Загрузите файл в LabelStudio
-   2. Проверьте и исправьте метки
-   3. Экспортируйте исправленный JSON
-   4. Укажите путь к исправленному файлу для продолжения
+   Вариант 1 — Streamlit дашборд (рекомендуется):
+     streamlit run dashboard.py
+     → Вкладка "HITL Review" → исправьте метки → "Сохранить"
+     Файл сохранится автоматически: exports/review_queue_corrected.csv
+
+   Вариант 2 — LabelStudio:
+     Файл: exports/labelstudio_review.json
+     1. Загрузите в LabelStudio, исправьте метки, экспортируйте JSON
+
+   Вариант 3 — вручную в CSV:
+     Файл: exports/review_queue.csv
+     1. Откройте, исправьте колонку predicted_label
+     2. Сохраните как exports/review_queue_corrected.csv
    ```
 3. **Ждать** подтверждения пользователя перед переходом к Шагу 4
 4. После получения исправленного файла — запустить `check_quality` с `human_label`

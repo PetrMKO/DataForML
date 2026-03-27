@@ -1,4 +1,4 @@
-# Annotation Specification: news classification
+# Annotation Specification: classification
 
 ## 1. Описание задачи
 Задача: мультиклассовая классификация новостных статей.
