@@ -297,6 +297,7 @@
 
 Визуальный playground с интерактивной схемой всех шагов пайплайна:
 
-**[Открыть Pipeline Playground](file:///Users/petr.marfutenko/Cursor/DataForML/pipeline_playground.html)**
+**[Открыть Pipeline Playground](./pipeline_playground.html)**
 
 Playground позволяет интерактивно исследовать архитектуру пайплайна, переключаться между слоями (агенты, HITL-точки, потоки данных) и настраивать отображение.
+x
