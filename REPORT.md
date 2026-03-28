@@ -1,4 +1,4 @@
-# Отчёт об учебной работе: Автоматизированный ML Data Pipeline с Human-in-the-Loop
+# Автоматизированный ML Data Pipeline с Human-in-the-Loop
 
 **Проект:** DataForML
 **Дата выполнения:** 27 марта 2026
